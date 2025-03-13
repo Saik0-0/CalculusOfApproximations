@@ -25,29 +25,37 @@ x_net = np.linspace(interval[0], interval[1], 4)
 y_net = f(x_net)
 
 
-def lagrangian_interpolation(x_net, y_net):
+def lagrangian_interpolation(x_net, y_net, arg):
+    """Интерполяция по Лагранжу через базисный полином"""
     n = len(x_net)
     x = symbols('x')
-    w_n = 1
-    for i in range(0, n):
-        w_n *= (x - x_net[i])
+    lagrange_function = 0
 
-    g = 0
-    for x_i, y_i in zip(x_net, y_net):
-        diff_w_n_calculated = diff_x(w_n, x_i)
-        g += y_i * (w_n / ((x - x_i) * diff_w_n_calculated))
+    for i in range(n):
+        base_func_i = 1
+        for j in range(n):
+            if i != j:
+                base_func_i *= (x - x_net[j]) / (x_net[i] - x_net[j])
+        lagrange_function += y_net[i] * base_func_i
 
-    g_result = lambdify(x, g)
-    return g_result
+    lagrange_function_result = lambdify(x, lagrange_function)(arg)
+    return lagrange_function_result
 
 
-x_plot = np.linspace(5, 10, 300)
-y_lagrange = lagrangian_interpolation(x_net, y_net)(x_plot)
+def plot_maker(x_net, y_net, function, interpolation_function):
+    x_values = np.linspace(x_net[0], x_net[-1], 50)
 
-plt.plot(x_plot, f(x_plot), 'k-', label='Исходная функция f(x)')
-plt.plot(x_plot, y_lagrange, 'r--', label='Интерполяция (Лагранж через разделённые разности)')
-plt.scatter(x_net, y_net, color='r', zorder=5, label='Узлы Лагранжа (4 шт.)')
+    interpolation_function_values = interpolation_function(x_net, y_net, x_values)
 
-plt.show()
+    plt.plot(x_values, function(x_values), 'k-', label='Исходная функция f(x)')
+    plt.plot(x_values, interpolation_function_values, 'r--', label='Интерполяция')
+    plt.scatter(x_net, y_net, color='r', zorder=5, label='Узлы')
+    plt.xlabel('x')
+    plt.ylabel('f(x)')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
 
+
+plot_maker(x_net, y_net, f, lagrangian_interpolation)
 
