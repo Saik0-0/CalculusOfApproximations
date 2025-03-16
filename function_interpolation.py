@@ -76,6 +76,48 @@ def make_chebyshev_grid(interval, deg):
     return np.array(grid)
 
 
+def cubic_spline(x_grid, y_grid, arg):
+    """Построение интерполяционного кубического сплайна"""
+    n = len(x_grid) - 1
+    h = np.diff(x_grid)
+
+    beta = np.zeros(n - 1)
+    for i in range(1, n):
+        beta[i - 1] = 3 * ((y_grid[i + 1] - y_grid[i]) / h[i] - (y_grid[i] - y_grid[i - 1]) / h[i - 1])
+
+    coef_matrix = np.zeros((n - 1, n - 1))
+    for i in range(n - 1):
+        if i > 0:
+            coef_matrix[i, i - 1] = h[i]  # Нижняя диагональ
+        if i < n - 2:
+            coef_matrix[i, i + 1] = h[i + 1]  # Верхняя диагональ
+        coef_matrix[i, i] = 2 * (h[i] + h[i + 1])  # Главная диагональ
+
+    # Матрица для вторых производных в узлах (коэффициент a_2)
+    matrix = np.zeros(n + 1)
+    matrix[1:n] = np.linalg.solve(coef_matrix, beta)
+
+    a_0 = y_grid[:-1]
+    a_1 = np.zeros(n)
+    a_2 = matrix[:-1]
+    a_3 = np.zeros(n)
+
+    for i in range(n):
+        a_3[i] = (matrix[i + 1] - matrix[i]) / (3 * h[i])
+        a_1[i] = (y_grid[i + 1] - y_grid[i]) / h[i] - a_2[i] * h[i] - a_3[i] * h[i] * h[i]
+
+    y_result = np.zeros_like(arg)
+    for j, x in enumerate(arg):
+        # определение отрезка интерполяции (где лежит x)
+        for i in range(n):
+            if x_grid[i] <= x <= x_grid[i + 1]:
+                dx = x - x_grid[i]
+                y_result[j] = a_0[i] + a_1[i] * dx + a_2[i] * (dx ** 2) + a_3[i] * (dx ** 3)
+                break
+
+    return y_result
+
+
 def plot_maker(x_grid, y_grid, function, interpolation_function, massage):
     x_values = np.linspace(x_grid[0], x_grid[-1], 30)
     # x_values = x_grid.copy()
@@ -117,6 +159,7 @@ x_splain_grid = make_grid(my_interval, 6)
 y_splain_grid = f(x_splain_grid)
 
 
-# plot_maker(x_grid_lagrangian, y_grid_lagrangian, f, newton_interpolation, 'Интерполяция по Ньютону')
-# plot_maker(x_grid_lagrangian, y_grid_lagrangian, f, lagrangian_interpolation, 'Интерполяция по Лагранжу')
-# plot_maker(x_chebyshev_grid, y_chebyshev_grid, f, lagrangian_interpolation, 'Интерполяция по Ньютону по Чебышевской сетке')
+plot_maker(x_grid_lagrangian, y_grid_lagrangian, f, newton_interpolation, 'Интерполяция по Ньютону')
+plot_maker(x_grid_lagrangian, y_grid_lagrangian, f, lagrangian_interpolation, 'Интерполяция по Лагранжу')
+plot_maker(x_chebyshev_grid, y_chebyshev_grid, f, lagrangian_interpolation, 'Интерполяция по Ньютону по Чебышевской сетке')
+plot_maker(x_splain_grid, y_splain_grid, f, cubic_spline, 'Построение интерполяционного кубического сплайна')
